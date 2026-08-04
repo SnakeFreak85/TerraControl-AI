@@ -21,6 +21,8 @@ Status: abgeschlossen
 
 ## Meilenstein 3: Kontrollierte Änderungen
 
+Status: in Arbeit
+
 - ein Problem als einen Arbeitsauftrag behandeln
 - relevante Dateien bestimmen
 - gemeinsamen Änderungsplan erstellen
@@ -44,4 +46,5 @@ Status: abgeschlossen
 - frei formulierte Probleme verarbeiten
 - geeignetes KI-Modell anbinden
 - Screenshots und Fotos optional unterstützen
+
 

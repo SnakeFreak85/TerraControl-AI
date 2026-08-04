@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "terracontrol-ai",
   "version": "0.1.0",
   "private": true,
@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
-    "check": "node --check src/index.js"
+    "check": "node --check src/index.js",
+    "preview": "node src/preview-demo.js"
   },
   "engines": {
     "node": ">=20"
