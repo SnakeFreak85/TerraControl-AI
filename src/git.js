@@ -42,7 +42,7 @@ function runGit(repositoryPath, argumentsList) {
         return;
       }
 
-      resolve(standardOutput.trim());
+      resolve(standardOutput.trimEnd());
     });
   });
 }
@@ -94,3 +94,4 @@ export async function getGitStatus(repositoryPath) {
     changes,
   });
 }
+
