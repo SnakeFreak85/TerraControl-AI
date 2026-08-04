@@ -1,4 +1,5 @@
 ﻿import { loadConfig } from "./config.js";
+import { readRepositoryFiles } from "./content-reader.js";
 import { getGitStatus } from "./git.js";
 import { createLogger } from "./logger.js";
 import { detectProject } from "./project-detector.js";
@@ -71,6 +72,39 @@ async function main() {
     }`,
   );
 
+  logger.info("Lesbare Dateiinhalte werden sicher geladen.");
+
+  const readableContent = await readRepositoryFiles(
+    config.repositoryPath,
+    scan.files.map((file) => file.path),
+  );
+
+  logger.info("Lesbare Dateiinhalte wurden geladen.", {
+    files: readableContent.files.length,
+    totalContentBytes:
+      readableContent.totalContentBytes,
+  });
+
+  console.log("\n--- Sichere Inhaltsanalyse ---");
+  console.log(
+    `Lesbare Dateien: ${readableContent.files.length}`,
+  );
+  console.log(
+    `Gesamtgröße:      ${readableContent.totalContentBytes} Bytes`,
+  );
+  console.log(
+    `Nicht unterstützt: ${readableContent.skipped.unsupportedFiles}`,
+  );
+  console.log(
+    `Binär erkannt:     ${readableContent.skipped.binaryFiles}`,
+  );
+  console.log(
+    `Zu groß:           ${readableContent.skipped.oversizedFiles}`,
+  );
+  console.log(
+    `Gesamtlimit:       ${readableContent.skipped.totalLimitFiles}`,
+  );
+
   logger.info("Projektart wird erkannt.");
 
   const project = await detectProject(
@@ -133,4 +167,5 @@ main().catch((error) => {
 
   process.exitCode = 1;
 });
+
 

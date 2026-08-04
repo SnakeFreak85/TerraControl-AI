@@ -11,6 +11,8 @@ Status: abgeschlossen
 
 ## Meilenstein 2: Sichere Repository-Analyse
 
+Status: abgeschlossen
+
 - Dateibaum rekursiv erfassen
 - sensible Dateien ausschließen
 - Projektart erkennen
@@ -42,3 +44,4 @@ Status: abgeschlossen
 - frei formulierte Probleme verarbeiten
 - geeignetes KI-Modell anbinden
 - Screenshots und Fotos optional unterstützen
+

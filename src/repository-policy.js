@@ -1,6 +1,9 @@
-﻿export const repositoryLimits = Object.freeze({
+﻿import path from "node:path";
+
+export const repositoryLimits = Object.freeze({
   maximumFiles: 5000,
   maximumFileSizeBytes: 256 * 1024,
+  maximumTotalContentBytes: 2 * 1024 * 1024,
 });
 
 const ignoredDirectoryNames = new Set([
@@ -36,6 +39,51 @@ const sensitiveExtensions = new Set([
   ".pfx",
 ]);
 
+const readableFileNames = new Set([
+  ".editorconfig",
+  ".env.example",
+  ".gitattributes",
+  ".gitignore",
+  "dockerfile",
+  "license",
+  "makefile",
+]);
+
+const readableExtensions = new Set([
+  ".c",
+  ".cpp",
+  ".cs",
+  ".css",
+  ".go",
+  ".graphql",
+  ".h",
+  ".html",
+  ".java",
+  ".js",
+  ".json",
+  ".jsx",
+  ".md",
+  ".mjs",
+  ".php",
+  ".properties",
+  ".ps1",
+  ".py",
+  ".rb",
+  ".rs",
+  ".scss",
+  ".sh",
+  ".sql",
+  ".svelte",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".vue",
+  ".xml",
+  ".yaml",
+  ".yml",
+]);
+
 export function shouldIgnoreDirectory(directoryName) {
   return ignoredDirectoryNames.has(
     directoryName.toLowerCase(),
@@ -58,5 +106,21 @@ export function isSensitiveFile(fileName) {
 
   return [...sensitiveExtensions].some((extension) =>
     normalizedName.endsWith(extension),
+  );
+}
+
+export function isReadableTextFile(fileName) {
+  const normalizedName = fileName.toLowerCase();
+
+  if (isSensitiveFile(normalizedName)) {
+    return false;
+  }
+
+  if (readableFileNames.has(normalizedName)) {
+    return true;
+  }
+
+  return readableExtensions.has(
+    path.extname(normalizedName),
   );
 }
