@@ -1,4 +1,4 @@
-﻿import { Agent } from "undici";
+﻿import { Agent, fetch as undiciFetch } from "undici";
 
 const loopbackHostNames = new Set([
   "localhost",
@@ -135,7 +135,7 @@ async function readGenerationPayload(
 export function createOllamaClient({
   baseUrl = "http://127.0.0.1:11434",
   model = "qwen2.5-coder:7b",
-  fetchImplementation = globalThis.fetch,
+  fetchImplementation = undiciFetch,
   timeoutMs = 20 * 60 * 1000,
   contextSize = 4096,
 } = {}) {
