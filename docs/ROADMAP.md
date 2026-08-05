@@ -39,6 +39,8 @@ Status: in Arbeit
 
 ## Meilenstein 5: Git-Abschluss
 
+Status: abgeschlossen
+
 - einen Commit pro Arbeitsauftrag erstellen
 - nur nach erfolgreicher Prüfung pushen
 - verständliche Abschlussmeldung erzeugen

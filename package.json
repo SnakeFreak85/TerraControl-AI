@@ -10,7 +10,8 @@
     "test": "node --test",
     "check": "node --check src/index.js",
     "preview": "node src/preview-demo.js",
-    "quality-demo": "node src/quality-demo.js"
+    "quality-demo": "node src/quality-demo.js",
+    "publish-demo": "node src/publish-demo.js"
   },
   "engines": {
     "node": ">=20"
