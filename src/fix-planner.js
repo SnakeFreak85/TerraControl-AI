@@ -19,6 +19,37 @@ import {
 
 const localSelectionLimit = 3;
 
+function prioritizeDocumentationCandidates(
+  candidates,
+  problem,
+) {
+  const normalizedProblem =
+    problem.toLowerCase();
+
+  if (
+    !/readme|dokument|dokumentation/u.test(
+      normalizedProblem,
+    )
+  ) {
+    return candidates;
+  }
+
+  const documentationCandidates =
+    candidates.filter((candidate) => {
+      const normalizedPath =
+        candidate.path.toLowerCase();
+
+      return (
+        normalizedPath.endsWith(".md") ||
+        normalizedPath.startsWith("docs/")
+      );
+    });
+
+  return documentationCandidates.length > 0
+    ? documentationCandidates
+    : candidates;
+}
+
 export async function planRepositoryFix(
   {
     problem,
@@ -51,8 +82,14 @@ export async function planRepositoryFix(
     );
   }
 
+  const prioritizedCandidates =
+    prioritizeDocumentationCandidates(
+      candidates,
+      analysis.problem,
+    );
+
   const selectedFiles =
-    candidates
+    prioritizedCandidates
       .slice(0, localSelectionLimit)
       .map((candidate) => ({
         path: candidate.path,

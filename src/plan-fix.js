@@ -93,17 +93,15 @@ async function main() {
   console.log(result.preview);
 
   console.log(
-    "\n--- Lokale Modellleistung ---",
+    "\n--- Planungsmodus ---",
   );
 
   console.log(
-    `Problemanalyse: ${result.metrics.problemAnalysis.totalDurationMs} ms, ` +
-    `${result.metrics.problemAnalysis.tokensPerSecond} Tokens/Sekunde`,
+    "Lokale Dateianalyse: erfolgreich",
   );
 
   console.log(
-    `Dateiauswahl: ${result.metrics.fileSelection.totalDurationMs} ms, ` +
-    `${result.metrics.fileSelection.tokensPerSecond} Tokens/Sekunde`,
+    `Modellaufrufe: ${result.metrics.modelCalls}`,
   );
 
   console.log(
