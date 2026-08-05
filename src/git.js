@@ -255,3 +255,257 @@ export async function getGitChangedFiles(
 
   return Object.freeze(changedFiles);
 }
+
+function normalizeGitFileList(
+  relativePaths,
+  operationName,
+) {
+  if (
+    !Array.isArray(relativePaths) ||
+    relativePaths.length === 0
+  ) {
+    throw new TypeError(
+      `${operationName} benötigt mindestens einen Dateipfad.`,
+    );
+  }
+
+  return [
+    ...new Set(
+      relativePaths.map(normalizeGitPath),
+    ),
+  ];
+}
+
+export async function stageGitFiles(
+  repositoryPath,
+  relativePaths,
+) {
+  const normalizedPaths =
+    normalizeGitFileList(
+      relativePaths,
+      "Git-Vormerkung",
+    );
+
+  await runGit(
+    repositoryPath,
+    [
+      "add",
+      "--",
+      ...normalizedPaths,
+    ],
+  );
+
+  return Object.freeze(normalizedPaths);
+}
+
+export async function getStagedGitFiles(
+  repositoryPath,
+) {
+  const output = await runGit(
+    repositoryPath,
+    [
+      "diff",
+      "--cached",
+      "--name-only",
+      "-z",
+      "--",
+    ],
+  );
+
+  const files = output
+    .split("\0")
+    .filter(Boolean)
+    .map((file) =>
+      file.replaceAll("\\", "/"),
+    )
+    .sort((left, right) =>
+      left.localeCompare(right),
+    );
+
+  return Object.freeze(files);
+}
+
+export async function unstageGitFiles(
+  repositoryPath,
+  relativePaths,
+) {
+  const normalizedPaths =
+    normalizeGitFileList(
+      relativePaths,
+      "Aufheben der Git-Vormerkung",
+    );
+
+  await runGit(
+    repositoryPath,
+    [
+      "restore",
+      "--staged",
+      "--",
+      ...normalizedPaths,
+    ],
+  );
+
+  return Object.freeze(normalizedPaths);
+}
+
+export async function createGitCommit(
+  repositoryPath,
+  message,
+) {
+  if (
+    typeof message !== "string" ||
+    message.trim().length === 0 ||
+    message.includes("\n") ||
+    message.includes("\r")
+  ) {
+    throw new Error(
+      "Für den Git-Commit wird eine einzeilige Nachricht benötigt.",
+    );
+  }
+
+  await runGit(
+    repositoryPath,
+    [
+      "commit",
+      "-m",
+      message.trim(),
+    ],
+  );
+
+  const commitSha = await runGit(
+    repositoryPath,
+    [
+      "rev-parse",
+      "HEAD",
+    ],
+  );
+
+  const commitSubject = await runGit(
+    repositoryPath,
+    [
+      "log",
+      "-1",
+      "--pretty=%s",
+    ],
+  );
+
+  return Object.freeze({
+    commitSha,
+    commitSubject,
+  });
+}
+
+function validateGitRefName(
+  value,
+  fieldName,
+) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    !/^[a-zA-Z0-9._/-]+$/.test(value) ||
+    value.includes("..") ||
+    value.startsWith("/") ||
+    value.endsWith("/")
+  ) {
+    throw new Error(
+      `Ungültiger ${fieldName}: ${value}`,
+    );
+  }
+
+  return value;
+}
+
+export async function getHeadCommitSha(
+  repositoryPath,
+) {
+  const commitSha = await runGit(
+    repositoryPath,
+    [
+      "rev-parse",
+      "HEAD",
+    ],
+  );
+
+  if (!/^[0-9a-f]{40}$/.test(commitSha)) {
+    throw new Error(
+      "Git lieferte keine gültige HEAD-Commit-ID.",
+    );
+  }
+
+  return commitSha;
+}
+
+export async function pushGitBranch(
+  repositoryPath,
+  remoteName,
+  branch,
+) {
+  const validatedRemote =
+    validateGitRefName(
+      remoteName,
+      "Remote-Name",
+    );
+
+  const validatedBranch =
+    validateGitRefName(
+      branch,
+      "Branchname",
+    );
+
+  const output = await runGit(
+    repositoryPath,
+    [
+      "push",
+      "--porcelain",
+      validatedRemote,
+      `HEAD:refs/heads/${validatedBranch}`,
+    ],
+  );
+
+  return Object.freeze({
+    remoteName: validatedRemote,
+    branch: validatedBranch,
+    output,
+    force: false,
+  });
+}
+
+export async function getRemoteBranchSha(
+  repositoryPath,
+  remoteName,
+  branch,
+) {
+  const validatedRemote =
+    validateGitRefName(
+      remoteName,
+      "Remote-Name",
+    );
+
+  const validatedBranch =
+    validateGitRefName(
+      branch,
+      "Branchname",
+    );
+
+  const output = await runGit(
+    repositoryPath,
+    [
+      "ls-remote",
+      "--exit-code",
+      validatedRemote,
+      `refs/heads/${validatedBranch}`,
+    ],
+  );
+
+  const [
+    commitSha,
+  ] = output.split(/\s+/);
+
+  if (!/^[0-9a-f]{40}$/.test(commitSha)) {
+    throw new Error(
+      "Remote lieferte keine gültige Commit-ID.",
+    );
+  }
+
+  return commitSha;
+}
