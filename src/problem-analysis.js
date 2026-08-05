@@ -5,13 +5,9 @@
     properties: {
       problem: {
         type: "string",
-        minLength: 1,
-        maxLength: 2000,
       },
       goal: {
         type: "string",
-        minLength: 1,
-        maxLength: 2000,
       },
       searchTerms: {
         type: "array",
@@ -19,8 +15,6 @@
         maxItems: 12,
         items: {
           type: "string",
-          minLength: 1,
-          maxLength: 80,
         },
       },
       sourceHints: {
@@ -29,8 +23,6 @@
         maxItems: 12,
         items: {
           type: "string",
-          minLength: 1,
-          maxLength: 120,
         },
       },
       validationScripts: {

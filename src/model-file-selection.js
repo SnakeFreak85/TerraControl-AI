@@ -21,13 +21,9 @@
             },
             objective: {
               type: "string",
-              minLength: 1,
-              maxLength: 1000,
             },
             reason: {
               type: "string",
-              minLength: 1,
-              maxLength: 1000,
             },
           },
           required: [
