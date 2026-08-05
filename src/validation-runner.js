@@ -75,17 +75,34 @@ function runCommand(
   validateCommand(command);
 
   return new Promise((resolve, reject) => {
-    const useWindowsCommandShell =
+    const useWindowsCommandWrapper =
       process.platform === "win32" &&
       command.executable.endsWith(".cmd");
 
+    const executable =
+      useWindowsCommandWrapper
+        ? process.env.ComSpec || "cmd.exe"
+        : command.executable;
+
+    const argumentsList =
+      useWindowsCommandWrapper
+        ? [
+            "/d",
+            "/s",
+            "/c",
+            `${command.executable} run ${command.scriptName}`,
+          ]
+        : command.arguments;
+
+    const startedAt = Date.now();
+
     const childProcess = spawn(
-      command.executable,
-      command.arguments,
+      executable,
+      argumentsList,
       {
         cwd: repositoryPath,
         windowsHide: true,
-        shell: useWindowsCommandShell,
+        shell: false,
         env: {
           ...process.env,
           CI: "true",
@@ -177,6 +194,8 @@ function runCommand(
           errorOutput:
             errorOutput.trimEnd(),
           outputBytes,
+          durationMs:
+            Date.now() - startedAt,
           success:
             exitCode === 0 &&
             terminationReason === null,

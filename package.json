@@ -9,7 +9,8 @@
     "start": "node src/index.js",
     "test": "node --test",
     "check": "node --check src/index.js",
-    "preview": "node src/preview-demo.js"
+    "preview": "node src/preview-demo.js",
+    "quality-demo": "node src/quality-demo.js"
   },
   "engines": {
     "node": ">=20"
