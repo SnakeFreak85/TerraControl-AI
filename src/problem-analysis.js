@@ -38,8 +38,7 @@
         maxItems: 6,
         items: {
           type: "string",
-          pattern:
-            "^[a-zA-Z0-9:_-]+$",
+
         },
       },
     },
