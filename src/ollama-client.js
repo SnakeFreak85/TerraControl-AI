@@ -1,4 +1,6 @@
-﻿const loopbackHostNames = new Set([
+﻿import { Agent } from "undici";
+
+const loopbackHostNames = new Set([
   "localhost",
   "127.0.0.1",
   "[::1]",
@@ -134,7 +136,7 @@ export function createOllamaClient({
   baseUrl = "http://127.0.0.1:11434",
   model = "qwen2.5-coder:7b",
   fetchImplementation = globalThis.fetch,
-  timeoutMs = 10 * 60 * 1000,
+  timeoutMs = 20 * 60 * 1000,
   contextSize = 4096,
 } = {}) {
   const parsedBaseUrl =
@@ -183,6 +185,11 @@ export function createOllamaClient({
     const abortController =
       new AbortController();
 
+    const dispatcher = new Agent({
+      headersTimeout: timeoutMs,
+      bodyTimeout: timeoutMs,
+    });
+
     const timeout = setTimeout(
       () => abortController.abort(),
       timeoutMs,
@@ -222,6 +229,7 @@ export function createOllamaClient({
             }),
             signal:
               abortController.signal,
+            dispatcher,
           },
         );
 
@@ -334,6 +342,7 @@ export function createOllamaClient({
       throw error;
     } finally {
       clearTimeout(timeout);
+      await dispatcher.close();
     }
   }
 
