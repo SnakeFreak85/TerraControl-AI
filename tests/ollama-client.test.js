@@ -71,7 +71,7 @@ test("sendet eine strukturierte Anfrage ausschließlich an die lokale API", asyn
     "qwen2.5-coder:7b",
   );
 
-  assert.equal(body.stream, false);
+  assert.equal(body.stream, true);
   assert.deepEqual(body.format, schema);
   assert.equal(body.options.num_ctx, 4096);
   assert.equal(body.options.num_predict, 250);
@@ -95,6 +95,73 @@ test("sendet eine strukturierte Anfrage ausschließlich an die lokale API", asyn
   );
 });
 
+test("setzt gestreamte Ollama-Teilantworten zusammen", async () => {
+  const encoder = new TextEncoder();
+
+  const client = createOllamaClient({
+    fetchImplementation:
+      async () => ({
+        ok: true,
+        status: 200,
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  response: '{"result":',
+                  done: false,
+                }) + "\n",
+              ),
+            );
+
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  response: '"success"}',
+                  done: false,
+                }) +
+                  "\n" +
+                  JSON.stringify({
+                    response: "",
+                    done: true,
+                    eval_count: 4,
+                    eval_duration: 2_000_000_000,
+                    total_duration: 3_000_000_000,
+                  }) +
+                  "\n",
+              ),
+            );
+
+            controller.close();
+          },
+        }),
+      }),
+  });
+
+  const response =
+    await client.generateStructured({
+      system: "System",
+      prompt: "Prompt",
+      schema,
+    });
+
+  assert.deepEqual(
+    response.data,
+    {
+      result: "success",
+    },
+  );
+
+  assert.equal(
+    response.metrics.generatedTokens,
+    4,
+  );
+
+  assert.equal(
+    response.metrics.totalDurationMs,
+    3000,
+  );
+});
 test("lehnt externe Modelladressen ab", () => {
   assert.throws(
     () =>

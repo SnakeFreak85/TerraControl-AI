@@ -44,6 +44,92 @@ function requireText(value, fieldName) {
   return value.trim();
 }
 
+async function readGenerationPayload(
+  response,
+) {
+  if (
+    !response.body ||
+    typeof response.body.getReader !==
+      "function"
+  ) {
+    return response.json();
+  }
+
+  const reader =
+    response.body.getReader();
+
+  const decoder =
+    new TextDecoder();
+
+  let pendingText = "";
+  let generatedResponse = "";
+  let finalPayload = {};
+
+  function consumeLine(line) {
+    const normalizedLine =
+      line.trim();
+
+    if (!normalizedLine) {
+      return;
+    }
+
+    const payload =
+      JSON.parse(normalizedLine);
+
+    if (
+      typeof payload.error === "string"
+    ) {
+      throw new Error(
+        `Ollama meldete einen Fehler: ${payload.error.slice(0, 1000)}`,
+      );
+    }
+
+    if (
+      typeof payload.response ===
+        "string"
+    ) {
+      generatedResponse +=
+        payload.response;
+    }
+
+    finalPayload = payload;
+  }
+
+  while (true) {
+    const {
+      done,
+      value,
+    } = await reader.read();
+
+    pendingText += decoder.decode(
+      value,
+      {
+        stream: !done,
+      },
+    );
+
+    const lines =
+      pendingText.split(/\r?\n/u);
+
+    pendingText =
+      lines.pop() ?? "";
+
+    for (const line of lines) {
+      consumeLine(line);
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  consumeLine(pendingText);
+
+  return {
+    ...finalPayload,
+    response: generatedResponse,
+  };
+}
 export function createOllamaClient({
   baseUrl = "http://127.0.0.1:11434",
   model = "qwen2.5-coder:7b",
@@ -117,7 +203,7 @@ export function createOllamaClient({
             },
             body: JSON.stringify({
               model: normalizedModel,
-              stream: false,
+              stream: true,
               system: normalizedSystem,
               prompt: [
                 normalizedPrompt,
@@ -149,7 +235,9 @@ export function createOllamaClient({
       }
 
       const payload =
-        await response.json();
+        await readGenerationPayload(
+          response,
+        );
 
       if (
         typeof payload.response !==
