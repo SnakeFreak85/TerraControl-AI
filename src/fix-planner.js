@@ -1,9 +1,6 @@
 ﻿import {
-  analyzeProblem,
+  createLocalProblemAnalysis,
 } from "./problem-analysis.js";
-import {
-  buildCandidateContext,
-} from "./candidate-context.js";
 import {
   createChangePlan,
 } from "./change-plan.js";
@@ -14,14 +11,13 @@ import {
   selectRelevantFiles,
 } from "./file-selection.js";
 import {
-  selectFilesWithModel,
-} from "./model-file-selection.js";
-import {
   formatChangePlanPreview,
 } from "./plan-preview.js";
 import {
   createWorkOrder,
 } from "./work-order.js";
+
+const localSelectionLimit = 3;
 
 export async function planRepositoryFix(
   {
@@ -31,24 +27,20 @@ export async function planRepositoryFix(
     readableContent,
     project,
   },
-  ollamaClient,
+  _ollamaClient,
   {
     workOrderOptions,
   } = {},
 ) {
-  const problemResult =
-    await analyzeProblem(
-      {
-        problem,
-        project,
-      },
-      ollamaClient,
-    );
+  const analysis =
+    createLocalProblemAnalysis({
+      problem,
+      project,
+    });
 
   const candidates =
     rankRelevantFiles({
-      analysis:
-        problemResult.analysis,
+      analysis,
       repositoryScan,
       readableContent,
     });
@@ -59,23 +51,17 @@ export async function planRepositoryFix(
     );
   }
 
-  const candidateContext =
-    buildCandidateContext({
-      analysis:
-        problemResult.analysis,
-      candidates,
-      readableContent,
-    });
-
-  const selectionResult =
-    await selectFilesWithModel(
-      {
-        analysis:
-          problemResult.analysis,
-        candidateContext,
-      },
-      ollamaClient,
-    );
+  const selectedFiles =
+    candidates
+      .slice(0, localSelectionLimit)
+      .map((candidate) => ({
+        path: candidate.path,
+        objective:
+          `Problem bearbeiten: ${analysis.goal}`,
+        reason:
+          candidate.reasons.join("; ") ||
+          "Datei wurde lokal als relevant eingestuft.",
+      }));
 
   const createdWorkOrder =
     createWorkOrder(
@@ -89,12 +75,9 @@ export async function planRepositoryFix(
   const selectedWorkOrder =
     selectRelevantFiles(
       createdWorkOrder,
-      selectionResult
-        .selectedFiles
-        .map(
-          (selection) =>
-            selection.path,
-        ),
+      selectedFiles.map(
+        (selection) => selection.path,
+      ),
       repositoryScan,
     );
 
@@ -102,23 +85,15 @@ export async function planRepositoryFix(
     createChangePlan(
       selectedWorkOrder,
       {
-        changes:
-          selectionResult
-            .selectedFiles
-            .map(
-              (selection) => ({
-                file:
-                  selection.path,
-                objective:
-                  selection.objective,
-                reason:
-                  selection.reason,
-              }),
-            ),
+        changes: selectedFiles.map(
+          (selection) => ({
+            file: selection.path,
+            objective: selection.objective,
+            reason: selection.reason,
+          }),
+        ),
         validationScripts:
-          problemResult
-            .analysis
-            .validationScripts,
+          analysis.validationScripts,
       },
       project,
     );
@@ -130,25 +105,20 @@ export async function planRepositoryFix(
       formatChangePlanPreview(
         plannedWorkOrder,
       ),
-    analysis:
-      problemResult.analysis,
+    analysis,
     candidates:
       Object.freeze(
         candidates.map(
           (candidate) =>
             Object.freeze({
-              path:
-                candidate.path,
-              score:
-                candidate.score,
+              path: candidate.path,
+              score: candidate.score,
             }),
         ),
       ),
     metrics: Object.freeze({
-      problemAnalysis:
-        problemResult.metrics,
-      fileSelection:
-        selectionResult.metrics,
+      mode: "local",
+      modelCalls: 0,
     }),
   });
 }

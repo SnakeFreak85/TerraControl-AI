@@ -303,3 +303,159 @@ export async function analyzeProblem(
     metrics: response.metrics,
   });
 }
+const localIgnoredWords = new Set([
+  "aktuell",
+  "aktuelle",
+  "bitte",
+  "dass",
+  "dem",
+  "den",
+  "der",
+  "des",
+  "die",
+  "ein",
+  "eine",
+  "einen",
+  "für",
+  "mit",
+  "nach",
+  "soll",
+  "sollen",
+  "und",
+  "wird",
+]);
+
+function createLocalSearchTerms(problem) {
+  const normalizedProblem = problem
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const terms = new Set();
+
+  for (
+    const token of normalizedProblem.match(
+      /[\p{L}\p{N}_-]{3,}/gu,
+    ) || []
+  ) {
+    if (localIgnoredWords.has(token)) {
+      continue;
+    }
+
+    terms.add(token);
+
+    if (
+      token.endsWith("n") &&
+      token.length > 4
+    ) {
+      terms.add(token.slice(0, -1));
+    }
+
+    if (
+      token.endsWith("s") &&
+      token.length > 4
+    ) {
+      terms.add(token.slice(0, -1));
+    }
+  }
+
+  if (
+    /foto|bild|image|mobil|smartphone/u.test(
+      normalizedProblem,
+    )
+  ) {
+    for (
+      const hint of [
+        "img",
+        "image",
+        "responsive",
+        "max-width",
+        "css",
+        "style",
+      ]
+    ) {
+      terms.add(hint);
+    }
+  }
+
+  if (
+    /readme|dokument|dokumentieren|dokumentation/u.test(
+      normalizedProblem,
+    )
+  ) {
+    for (
+      const hint of [
+        "readme",
+        "roadmap",
+        "docs",
+        "documentation",
+      ]
+    ) {
+      terms.add(hint);
+    }
+  }
+
+  return [...terms].slice(0, 12);
+}
+
+export function createLocalProblemAnalysis({
+  problem,
+  project,
+}) {
+  const normalizedProblem = requireText(
+    problem,
+    "Problembeschreibung",
+    4000,
+  );
+
+  if (
+    !project ||
+    !project.scripts ||
+    typeof project.scripts !== "object"
+  ) {
+    throw new Error(
+      "Die lokale Problemanalyse benötigt eine gültige Projekterkennung.",
+    );
+  }
+
+  const searchTerms =
+    createLocalSearchTerms(
+      normalizedProblem,
+    );
+
+  if (searchTerms.length === 0) {
+    throw new Error(
+      "Die Problembeschreibung enthält keine verwertbaren Suchbegriffe.",
+    );
+  }
+
+  const validationScripts = [
+    "test",
+    "check",
+    "build",
+    "lint",
+  ].filter(
+    (scriptName) =>
+      Object.hasOwn(
+        project.scripts,
+        scriptName,
+      ),
+  );
+
+  if (validationScripts.length === 0) {
+    throw new Error(
+      "Das Projekt besitzt kein geeignetes Validierungsskript.",
+    );
+  }
+
+  return Object.freeze({
+    problem: normalizedProblem,
+    goal: normalizedProblem,
+    searchTerms:
+      Object.freeze(searchTerms),
+    sourceHints:
+      Object.freeze(searchTerms),
+    validationScripts:
+      Object.freeze(validationScripts),
+  });
+}

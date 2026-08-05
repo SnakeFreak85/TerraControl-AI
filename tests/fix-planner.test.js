@@ -53,78 +53,7 @@ const project = {
   },
 };
 
-test("erstellt aus zwei Modellschritten einen sicheren gemeinsamen Plan", async () => {
-  let modelCall = 0;
-
-  const ollamaClient = {
-    generateStructured:
-      async () => {
-        modelCall += 1;
-
-        if (modelCall === 1) {
-          return {
-            data: {
-              problem:
-                "Fotos in Tierakten sind mobil zu groß.",
-              goal:
-                "Bilder responsiv darstellen.",
-              searchTerms: [
-                "Tierakte",
-                "responsive",
-                "max-width",
-              ],
-              sourceHints: [
-                "Tierakten-Komponente",
-                "CSS-Bilddarstellung",
-                "src/InventedFile.js",
-              ],
-              validationScripts: [
-                "test",
-                "lint",
-              ],
-            },
-            metrics: {
-              model:
-                "qwen2.5-coder:7b",
-              generatedTokens: 100,
-              totalDurationMs: 80000,
-              tokensPerSecond: 2.5,
-            },
-          };
-        }
-
-        return {
-          data: {
-            selectedFiles: [
-              {
-                path:
-                  "src/AnimalRecord.jsx",
-                objective:
-                  "Responsive Bildklasse verwenden.",
-                reason:
-                  "Die Komponente zeigt das Tieraktenbild.",
-              },
-              {
-                path:
-                  "src/animal-record.css",
-                objective:
-                  "Bildbreite mobil begrenzen.",
-                reason:
-                  "Die Datei enthält die Bildstyles.",
-              },
-            ],
-          },
-          metrics: {
-            model:
-              "qwen2.5-coder:7b",
-            generatedTokens: 120,
-            totalDurationMs: 90000,
-            tokensPerSecond: 2.4,
-          },
-        };
-      },
-  };
-
+test("erstellt lokal einen sicheren gemeinsamen Plan ohne Modellaufruf", async () => {
   const result =
     await planRepositoryFix(
       {
@@ -136,7 +65,7 @@ test("erstellt aus zwei Modellschritten einen sicheren gemeinsamen Plan", async 
         readableContent,
         project,
       },
-      ollamaClient,
+      undefined,
       {
         workOrderOptions: {
           idFactory: () =>
@@ -149,31 +78,29 @@ test("erstellt aus zwei Modellschritten einen sicheren gemeinsamen Plan", async 
       },
     );
 
-  assert.equal(modelCall, 2);
-
   assert.equal(
     result.workOrder.status,
     "planned",
   );
 
   assert.deepEqual(
-    result.workOrder.relevantFiles,
+    [...result.workOrder.relevantFiles].sort(),
     [
       "src/AnimalRecord.jsx",
       "src/animal-record.css",
-    ],
+    ].sort(),
   );
 
   assert.deepEqual(
     result.workOrder.validationScripts,
-    ["test"],
+    ["test", "check"],
   );
 
   assert.equal(
     result.candidates.some(
       (candidate) =>
         candidate.path.includes(
-          "InventedFile",
+          "unrelated",
         ),
     ),
     false,
@@ -184,58 +111,29 @@ test("erstellt aus zwei Modellschritten einen sicheren gemeinsamen Plan", async 
     /Keine Datei wurde verändert/,
   );
 
-  assert.equal(
-    result.metrics
-      .fileSelection
-      .tokensPerSecond,
-    2.4,
+  assert.deepEqual(
+    result.metrics,
+    {
+      mode: "local",
+      modelCalls: 0,
+    },
   );
 });
 
-test("bricht ohne lokale Dateitreffer vor der Dateiauswahl ab", async () => {
-  let modelCall = 0;
-
-  const ollamaClient = {
-    generateStructured:
-      async () => {
-        modelCall += 1;
-
-        return {
-          data: {
-            problem:
-              "Unbekanntes Problem",
-            goal:
-              "Unbekanntes Ziel",
-            searchTerms: [
-              "definitely-nonexistent",
-            ],
-            sourceHints: [
-              "ghost-file.xyz",
-            ],
-            validationScripts: [
-              "test",
-            ],
-          },
-          metrics: {},
-        };
-      },
-  };
-
+test("bricht ohne lokale Dateitreffer ab", async () => {
   await assert.rejects(
     planRepositoryFix(
       {
         problem:
-          "Unbekanntes Problem",
+          "definitely-nonexistent ghost-file",
         repositoryPath:
           "example-repository",
         repositoryScan,
         readableContent,
         project,
       },
-      ollamaClient,
+      undefined,
     ),
     /keine passenden realen Repository-Dateien/,
   );
-
-  assert.equal(modelCall, 1);
 });
