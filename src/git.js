@@ -95,3 +95,90 @@ export async function getGitStatus(repositoryPath) {
   });
 }
 
+
+export const gitDiffLimits = Object.freeze({
+  maximumDiffBytes: 512 * 1024,
+});
+
+function normalizeGitPath(filePath) {
+  if (
+    typeof filePath !== "string" ||
+    filePath.trim().length === 0
+  ) {
+    throw new TypeError(
+      "Jeder Git-Diff-Pfad muss eine Zeichenkette sein.",
+    );
+  }
+
+  const normalizedPath = filePath
+    .trim()
+    .replaceAll("\\", "/")
+    .replace(/^\.\/+/, "");
+
+  if (
+    normalizedPath.startsWith("/") ||
+    /^[a-zA-Z]:\//.test(normalizedPath) ||
+    normalizedPath === ".." ||
+    normalizedPath.startsWith("../") ||
+    normalizedPath.includes("/../") ||
+    normalizedPath.includes("\0")
+  ) {
+    throw new Error(
+      `Ungültiger Git-Diff-Pfad: ${filePath}`,
+    );
+  }
+
+  return normalizedPath;
+}
+
+export async function getGitDiff(
+  repositoryPath,
+  relativePaths,
+) {
+  if (
+    !Array.isArray(relativePaths) ||
+    relativePaths.length === 0
+  ) {
+    throw new TypeError(
+      "Für den Git-Diff wird mindestens ein Dateipfad benötigt.",
+    );
+  }
+
+  const normalizedPaths = [
+    ...new Set(
+      relativePaths.map(normalizeGitPath),
+    ),
+  ];
+
+  const diffText = await runGit(
+    repositoryPath,
+    [
+      "diff",
+      "--no-ext-diff",
+      "--unified=3",
+      "--",
+      ...normalizedPaths,
+    ],
+  );
+
+  const sizeBytes = Buffer.byteLength(
+    diffText,
+    "utf8",
+  );
+
+  if (
+    sizeBytes >
+    gitDiffLimits.maximumDiffBytes
+  ) {
+    throw new RangeError(
+      "Der Git-Diff überschreitet das sichere Ausgabelimit.",
+    );
+  }
+
+  return Object.freeze({
+    files: Object.freeze(normalizedPaths),
+    text: diffText,
+    sizeBytes,
+    empty: diffText.length === 0,
+  });
+}
