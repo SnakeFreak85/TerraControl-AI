@@ -21,7 +21,7 @@ Status: abgeschlossen
 
 ## Meilenstein 3: Kontrollierte Änderungen
 
-Status: in Arbeit
+Status: abgeschlossen
 
 - ein Problem als einen Arbeitsauftrag behandeln
 - relevante Dateien bestimmen
@@ -30,6 +30,8 @@ Status: in Arbeit
 - Git-Diff kontrollieren
 
 ## Meilenstein 4: Qualitätssicherung
+
+Status: in Arbeit
 
 - Build, Tests und Linter ausführen
 - Fehler strukturiert auswerten
@@ -46,5 +48,3 @@ Status: in Arbeit
 - frei formulierte Probleme verarbeiten
 - geeignetes KI-Modell anbinden
 - Screenshots und Fotos optional unterstützen
-
-

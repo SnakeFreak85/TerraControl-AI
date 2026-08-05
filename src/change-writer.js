@@ -242,3 +242,189 @@ export async function applyChangeDrafts(
     postWriteResult,
   });
 }
+
+export async function revertAppliedChangeDrafts(
+  appliedWorkOrder,
+  {
+    fileReplacer = replaceFileAtomically,
+  } = {},
+) {
+  const allowedStatuses = new Set([
+    "applied",
+    "diff-verified",
+    "validated",
+  ]);
+
+  if (
+    !appliedWorkOrder ||
+    !allowedStatuses.has(
+      appliedWorkOrder.status,
+    ) ||
+    !Array.isArray(
+      appliedWorkOrder.appliedFiles,
+    ) ||
+    !Array.isArray(appliedWorkOrder.drafts)
+  ) {
+    throw new Error(
+      "Rücksetzen benötigt einen angewendeten Arbeitsauftrag.",
+    );
+  }
+
+  const repositoryPath = await realpath(
+    appliedWorkOrder.repositoryPath,
+  );
+
+  const appliedFileSet = new Set(
+    appliedWorkOrder.appliedFiles,
+  );
+
+  const draftByFile = new Map(
+    appliedWorkOrder.drafts.map((draft) => [
+      draft.file,
+      draft,
+    ]),
+  );
+
+  const preparedFiles = [];
+
+  for (
+    const appliedFile of appliedFileSet
+  ) {
+    const draft = draftByFile.get(
+      appliedFile,
+    );
+
+    if (!draft) {
+      throw new Error(
+        `Für die angewendete Datei fehlt der Entwurf: ${appliedFile}`,
+      );
+    }
+
+    const candidatePath = path.resolve(
+      repositoryPath,
+      appliedFile,
+    );
+
+    if (
+      isOutsideRepository(
+        repositoryPath,
+        candidatePath,
+      )
+    ) {
+      throw new Error(
+        `Rücksetzpfad liegt außerhalb des Repositorys: ${appliedFile}`,
+      );
+    }
+
+    const fileStats = await lstat(
+      candidatePath,
+    );
+
+    if (
+      fileStats.isSymbolicLink() ||
+      !fileStats.isFile()
+    ) {
+      throw new Error(
+        `Datei kann nicht sicher zurückgesetzt werden: ${appliedFile}`,
+      );
+    }
+
+    const resolvedFilePath = await realpath(
+      candidatePath,
+    );
+
+    if (
+      isOutsideRepository(
+        repositoryPath,
+        resolvedFilePath,
+      )
+    ) {
+      throw new Error(
+        `Datei verweist aus dem Repository: ${appliedFile}`,
+      );
+    }
+
+    const currentContent = await readFile(
+      resolvedFilePath,
+      "utf8",
+    );
+
+    if (
+      currentContent !== draft.proposedContent
+    ) {
+      throw new Error(
+        `Datei wurde nach dem Schreiben unerwartet verändert: ${appliedFile}`,
+      );
+    }
+
+    preparedFiles.push({
+      file: appliedFile,
+      absolutePath: resolvedFilePath,
+      originalContent:
+        draft.originalContent,
+      proposedContent:
+        draft.proposedContent,
+      mode: fileStats.mode,
+    });
+  }
+
+  const revertedFiles = [];
+
+  try {
+    for (const preparedFile of preparedFiles) {
+      await fileReplacer(
+        preparedFile.absolutePath,
+        preparedFile.originalContent,
+        preparedFile.mode,
+      );
+
+      revertedFiles.push(preparedFile);
+    }
+  } catch (revertError) {
+    const recoveryErrors = [];
+
+    for (
+      const revertedFile of
+      [...revertedFiles].reverse()
+    ) {
+      try {
+        await fileReplacer(
+          revertedFile.absolutePath,
+          revertedFile.proposedContent,
+          revertedFile.mode,
+        );
+      } catch (recoveryError) {
+        recoveryErrors.push(
+          recoveryError,
+        );
+      }
+    }
+
+    if (recoveryErrors.length > 0) {
+      throw new AggregateError(
+        [
+          revertError,
+          ...recoveryErrors,
+        ],
+        "Rücksetzen und Wiederherstellung des vorherigen Zustands sind fehlgeschlagen.",
+      );
+    }
+
+    throw new Error(
+      `Rücksetzen fehlgeschlagen; der angewendete Zustand wurde wiederhergestellt: ${revertError.message}`,
+      {
+        cause: revertError,
+      },
+    );
+  }
+
+  return Object.freeze({
+    ...appliedWorkOrder,
+    status: "reverted",
+    revertedFiles: Object.freeze(
+      revertedFiles.map(
+        (file) => file.file,
+      ),
+    ),
+  });
+}

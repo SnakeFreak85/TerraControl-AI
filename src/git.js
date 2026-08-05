@@ -182,3 +182,76 @@ export async function getGitDiff(
     empty: diffText.length === 0,
   });
 }
+
+export async function getGitChangedFiles(
+  repositoryPath,
+) {
+  const statusOutput = await runGit(
+    repositoryPath,
+    [
+      "status",
+      "--porcelain=v1",
+      "-z",
+      "--untracked-files=all",
+    ],
+  );
+
+  if (statusOutput.length === 0) {
+    return Object.freeze([]);
+  }
+
+  const records = statusOutput.split("\0");
+  const changedFiles = [];
+
+  for (
+    let index = 0;
+    index < records.length;
+    index += 1
+  ) {
+    const record = records[index];
+
+    if (!record) {
+      continue;
+    }
+
+    if (record.length < 4) {
+      throw new Error(
+        "Git lieferte einen unerwarteten Statusdatensatz.",
+      );
+    }
+
+    const status = record.slice(0, 2);
+    const file = record
+      .slice(3)
+      .replaceAll("\\", "/");
+
+    let originalFile = null;
+
+    if (
+      status.includes("R") ||
+      status.includes("C")
+    ) {
+      index += 1;
+
+      originalFile =
+        records[index]?.replaceAll(
+          "\\",
+          "/",
+        ) || null;
+    }
+
+    changedFiles.push(
+      Object.freeze({
+        status,
+        file,
+        originalFile,
+      }),
+    );
+  }
+
+  changedFiles.sort((left, right) =>
+    left.file.localeCompare(right.file),
+  );
+
+  return Object.freeze(changedFiles);
+}
