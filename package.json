@@ -11,7 +11,8 @@
     "check": "node --check src/index.js",
     "preview": "node src/preview-demo.js",
     "quality-demo": "node src/quality-demo.js",
-    "publish-demo": "node src/publish-demo.js"
+    "publish-demo": "node src/publish-demo.js",
+    "plan": "node src/plan-fix.js"
   },
   "engines": {
     "node": ">=20"

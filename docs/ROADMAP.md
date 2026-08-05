@@ -47,6 +47,8 @@ Status: abgeschlossen
 
 ## Meilenstein 6: Problemverständnis
 
+Status: in Arbeit
+
 - frei formulierte Probleme verarbeiten
 - geeignetes KI-Modell anbinden
 - Screenshots und Fotos optional unterstützen
