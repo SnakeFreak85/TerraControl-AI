@@ -224,6 +224,26 @@ export function createOllamaClient({
         );
       }
 
+      if (
+        error instanceof TypeError &&
+        error.message === "fetch failed"
+      ) {
+        const causeCode =
+          error.cause?.code ??
+          "unbekannt";
+
+        const causeMessage =
+          error.cause?.message ??
+          error.message;
+
+        throw new Error(
+          `Die Verbindung zu Ollama wurde unterbrochen (${causeCode}): ${causeMessage}`,
+          {
+            cause: error,
+          },
+        );
+      }
+
       throw error;
     } finally {
       clearTimeout(timeout);
