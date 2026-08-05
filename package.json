@@ -1,8 +1,8 @@
-{
+﻿{
   "name": "terracontrol-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "Lokaler Repository-Fix-Agent für kontrollierte Codeänderungen",
+  "description": "Lokaler Repository-Fix-Agent fÃ¼r kontrollierte CodeÃ¤nderungen",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "preview": "node src/preview-demo.js",
     "quality-demo": "node src/quality-demo.js",
     "publish-demo": "node src/publish-demo.js",
-    "plan": "node src/plan-fix.js"
+    "plan": "node src/plan-fix.js",
+    "draft": "node src/draft-fix.js"
   },
   "engines": {
     "node": ">=20"

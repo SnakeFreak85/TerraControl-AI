@@ -2,7 +2,7 @@
 import { readRepositoryFiles } from "./content-reader.js";
 import { planRepositoryFix } from "./fix-planner.js";
 import { getGitStatus } from "./git.js";
-import { createOllamaClient } from "./ollama-client.js";
+
 import { detectProject } from "./project-detector.js";
 import { scanRepository } from "./repository.js";
 
@@ -57,24 +57,8 @@ async function main() {
     );
   }
 
-  const ollamaClient =
-    createOllamaClient({
-      baseUrl:
-        config.ollamaBaseUrl,
-      model:
-        config.ollamaModel,
-      timeoutMs:
-        config.ollamaTimeoutMs,
-      contextSize:
-        config.ollamaContextSize,
-    });
-
   console.log(
-    `Lokales Modell ${ollamaClient.model} analysiert das Problem.`,
-  );
-
-  console.log(
-    "Dies kann auf diesem PC mehrere Minuten dauern.\n",
+    "Lokale Dateianalyse wird durchgeführt.\n",
   );
 
   const result =
@@ -87,7 +71,7 @@ async function main() {
         readableContent,
         project,
       },
-      ollamaClient,
+      undefined,
     );
 
   console.log(result.preview);
