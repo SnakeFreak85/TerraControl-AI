@@ -122,8 +122,7 @@ export function createOllamaClient({
               prompt: [
                 normalizedPrompt,
                 "",
-                "Antworte ausschließlich entsprechend diesem JSON-Schema:",
-                JSON.stringify(schema),
+                "Antworte ausschließlich als JSON entsprechend dem vorgegebenen Schema.",
               ].join("\n"),
               format: schema,
               options: {
